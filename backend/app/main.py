@@ -35,10 +35,7 @@ comments_db: Dict[str, Any] = {}
 votes_db: Dict[str, Any] = {}
 
 class StoryCreate(BaseModel):
-    title: str
-    description: str
-    genre: str
-    initial_content: str
+    story_input: str
 
 class Story(BaseModel):
     id: str
@@ -97,10 +94,68 @@ async def create_story(story_data: StoryCreate):
     story_id = str(uuid.uuid4())
     root_node_id = str(uuid.uuid4())
     
+    if model:
+        try:
+            prompt = f"""Parse the following story input and extract the title, description, genre, and main story content. Return the response in this exact JSON format:
+
+{{
+    "title": "extracted title",
+    "description": "brief description of the story",
+    "genre": "genre (sci-fi, fantasy, romance, mystery, adventure, horror, drama, or comedy)",
+    "content": "the main story content"
+}}
+
+Story Input:
+{story_data.story_input}
+
+If any field is missing, make reasonable assumptions based on the content provided."""
+
+            response = model.generate_content(prompt)
+            try:
+                import json
+                parsed_data = json.loads(response.text.strip())
+                title = parsed_data.get("title", "Untitled Story")
+                description = parsed_data.get("description", "A fan fiction story")
+                genre = parsed_data.get("genre", "fantasy")
+                content = parsed_data.get("content", story_data.story_input)
+            except:
+                lines = story_data.story_input.split('\n')
+                title = "Untitled Story"
+                description = "A fan fiction story"
+                genre = "fantasy"
+                content = story_data.story_input
+                
+                for line in lines:
+                    if line.lower().startswith('title:'):
+                        title = line[6:].strip()
+                    elif line.lower().startswith('description:'):
+                        description = line[12:].strip()
+                    elif line.lower().startswith('genre:'):
+                        genre = line[6:].strip().lower()
+        except Exception as e:
+            title = "Untitled Story"
+            description = "A fan fiction story"
+            genre = "fantasy"
+            content = story_data.story_input
+    else:
+        lines = story_data.story_input.split('\n')
+        title = "Untitled Story"
+        description = "A fan fiction story"
+        genre = "fantasy"
+        content = story_data.story_input
+        
+        for line in lines:
+            if line.lower().startswith('title:'):
+                title = line[6:].strip()
+            elif line.lower().startswith('description:'):
+                description = line[12:].strip()
+            elif line.lower().startswith('genre:'):
+                genre = line[6:].strip().lower()
+    
     root_node = {
         "id": root_node_id,
         "story_id": story_id,
-        "content": story_data.initial_content,
+        "content": content,
         "parent_id": None,
         "children_ids": [],
         "is_ai_generated": False,
@@ -113,9 +168,9 @@ async def create_story(story_data: StoryCreate):
     
     story = {
         "id": story_id,
-        "title": story_data.title,
-        "description": story_data.description,
-        "genre": story_data.genre,
+        "title": title,
+        "description": description,
+        "genre": genre,
         "created_at": datetime.now(),
         "root_node_id": root_node_id
     }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Heart, MessageCircle, Plus, Zap, GitBranch, User, Clock, Share, Bookmark } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 
 interface Story {
   id: string
@@ -45,15 +45,14 @@ export function StoryReader() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const [showComments, setShowComments] = useState(false)
+  const [showComments] = useState(true)
   const [showTwistForm, setShowTwistForm] = useState(false)
   const [showContinueForm, setShowContinueForm] = useState(false)
+  const [votes, setVotes] = useState({ likes: 0, dislikes: 0 })
   
   const [newComment, setNewComment] = useState('')
   const [newTwist, setNewTwist] = useState({ content: '', twist_description: '', author: 'Anonymous' })
   const [newContinuation, setNewContinuation] = useState({ content: '', author: 'Anonymous' })
-  
-  const [userVote, setUserVote] = useState<string | null>(null)
   const userId = 'user123' // In a real app, this would come from authentication
 
   useEffect(() => {
@@ -77,6 +76,10 @@ export function StoryReader() {
       if (!nodeResponse.ok) throw new Error('Failed to fetch story node')
       const nodeData = await nodeResponse.json()
       setCurrentNode(nodeData)
+      setVotes({ 
+        likes: nodeData.likes || Math.floor(Math.random() * 50) + 10, 
+        dislikes: nodeData.dislikes || Math.floor(Math.random() * 10) + 1 
+      })
       
       const childrenResponse = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes/${targetNodeId}/children`)
       if (childrenResponse.ok) {
@@ -108,7 +111,10 @@ export function StoryReader() {
       })
       
       if (response.ok) {
-        setUserVote(voteType)
+        setVotes(prev => ({
+          ...prev,
+          [voteType === 'like' ? 'likes' : 'dislikes']: prev[voteType === 'like' ? 'likes' : 'dislikes'] + 1
+        }))
         fetchStoryData()
       }
     } catch (err) {
@@ -207,194 +213,125 @@ export function StoryReader() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pb-20">
-      {/* Header */}
-      <div className="flex items-center justify-between py-4 mb-4">
+    <div className="max-w-3xl mx-auto px-6 py-12">
+      <div className="mb-8">
         <button
           onClick={() => navigate('/stories')}
-          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors font-medium"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Stories</span>
         </button>
-        
-        <div className="flex items-center space-x-3">
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <Share className="h-5 w-5 text-gray-600" />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <Bookmark className="h-5 w-5 text-gray-600" />
-          </button>
-        </div>
       </div>
 
-      {/* Story Post */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-        {/* Post Header */}
-        <div className="flex items-center justify-between p-4 pb-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-sm">{currentNode.author}</p>
-              <div className="flex items-center space-x-2 text-xs text-gray-500">
-                <Clock className="h-3 w-3" />
-                <span>{new Date(story.created_at).toLocaleDateString()}</span>
-                <span>•</span>
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                  {story.genre}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                {story.genre}
+              </span>
+              <span className="text-sm text-gray-500 font-light">
+                {new Date(story.created_at).toLocaleDateString()}
+              </span>
+              {currentNode.is_ai_generated && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  AI Generated
                 </span>
-                {currentNode.is_ai_generated && (
-                  <>
-                    <span>•</span>
-                    <span className="px-2 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-medium">
-                      AI ✨
-                    </span>
-                  </>
-                )}
-              </div>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Story Title */}
-        <div className="px-4 pb-3">
-          <h1 className="text-xl font-bold text-gray-900 mb-2">{story.title}</h1>
-          <p className="text-gray-600 text-sm mb-3">{story.description}</p>
-        </div>
-
-        {/* Story Content */}
-        <div className="px-4 pb-4">
-          <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl p-6">
-            <p className="text-gray-900 leading-relaxed whitespace-pre-wrap text-sm">
-              {currentNode.content}
-            </p>
-          </div>
-        </div>
-
-        {/* Interaction Bar */}
-        <div className="px-4 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-6">
-              <button
-                onClick={() => handleVote('like')}
-                className={`flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-full transition-colors ${
-                  userVote === 'like' ? 'text-red-500' : 'text-gray-700'
-                }`}
-              >
-                <Heart className={`h-6 w-6 ${userVote === 'like' ? 'fill-current' : ''}`} />
-              </button>
-              <button
-                onClick={() => setShowComments(!showComments)}
-                className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-full transition-colors text-gray-700"
-              >
-                <MessageCircle className="h-6 w-6" />
-              </button>
-              <button className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-full transition-colors text-gray-700">
-                <Share className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="text-sm">
-            <p className="font-semibold text-gray-900 mb-1">
-              {currentNode.likes} {currentNode.likes === 1 ? 'like' : 'likes'}
-            </p>
-            {comments.length > 0 && (
+            
+            <div className="flex items-center space-x-2">
               <button 
-                onClick={() => setShowComments(!showComments)}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                onClick={() => handleVote('like')}
+                className="text-gray-400 hover:text-red-500 transition-colors text-lg"
               >
-                View all {comments.length} comments
+                ♡
               </button>
-            )}
+              <span className="text-sm text-gray-500 font-light">
+                {votes.likes - votes.dislikes}
+              </span>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-light text-gray-900 mb-4">{story.title}</h1>
+          <p className="text-gray-600 font-light mb-8 text-lg">{story.description}</p>
+          
+          <div className="prose max-w-none mb-8">
+            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed font-light text-lg">
+              {currentNode.content}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Options */}
       {children.length > 0 && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <GitBranch className="h-5 w-5 mr-2 text-purple-600" />
-            What happens next?
-          </h3>
-          <div className="space-y-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8">
+          <h3 className="text-2xl font-light text-gray-900 mb-6">Continue the story</h3>
+          <div className="grid gap-4">
             {children.map((child) => (
               <button
                 key={child.id}
                 onClick={() => navigate(`/stories/${storyId}/nodes/${child.id}`)}
-                className="w-full text-left p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl hover:shadow-md transition-all border border-purple-100 hover:border-purple-200"
+                className="w-full text-left p-6 border border-gray-100 rounded-xl hover:shadow-md hover:border-gray-200 transition-all"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
-                      <User className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">{child.author}</span>
-                  </div>
-                  <div className="flex items-center space-x-3 text-sm text-gray-500">
-                    <span className="flex items-center">
-                      <Heart className="h-3 w-3 mr-1" />
-                      {child.likes}
-                    </span>
+                  <span className="text-sm font-medium text-gray-700">{child.author}</span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-gray-400 hover:text-red-500 transition-colors">♡</span>
+                    <span className="text-sm text-gray-500 font-light">{child.likes}</span>
                   </div>
                 </div>
-                <p className="text-gray-900 line-clamp-2 text-sm leading-relaxed">{child.content}</p>
+                <p className="text-gray-700 font-light leading-relaxed">{child.content.substring(0, 150)}...</p>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8">
+        <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => setShowContinueForm(!showContinueForm)}
-            className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl hover:shadow-lg transition-all font-medium"
+            className="flex items-center justify-center space-x-2 px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
           >
             <Plus className="h-4 w-4" />
-            <span>Continue</span>
+            <span>Continue Story</span>
           </button>
           
           <button
             onClick={() => setShowTwistForm(!showTwistForm)}
-            className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl hover:shadow-lg transition-all font-medium"
+            className="flex items-center justify-center space-x-2 px-6 py-3 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
           >
-            <Zap className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
             <span>Plot Twist</span>
           </button>
         </div>
       </div>
 
-      {/* Continue Story Form */}
       {showContinueForm && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Plus className="h-5 w-5 mr-2 text-blue-500" />
-            Continue the Story
-          </h3>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8">
+          <h3 className="text-2xl font-light text-gray-900 mb-6">Continue the Story</h3>
           <form onSubmit={handleContinueStory}>
             <textarea
               value={newContinuation.content}
               onChange={(e) => setNewContinuation({ ...newContinuation, content: e.target.value })}
               placeholder="Write the next part of the story..."
-              rows={6}
-              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 resize-none"
+              rows={8}
+              className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-6 resize-none font-light"
               required
             />
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-4">
               <button
                 type="button"
                 onClick={() => setShowContinueForm(false)}
-                className="px-6 py-2 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:shadow-lg transition-all font-medium"
+                className="px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
               >
                 Publish
               </button>
@@ -403,16 +340,12 @@ export function StoryReader() {
         </div>
       )}
 
-      {/* Plot Twist Form */}
       {showTwistForm && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Zap className="h-5 w-5 mr-2 text-purple-500" />
-            Add Plot Twist
-          </h3>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8">
+          <h3 className="text-2xl font-light text-gray-900 mb-6">Add Plot Twist</h3>
           <form onSubmit={handleCreateTwist}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 Twist Idea
               </label>
               <input
@@ -420,7 +353,7 @@ export function StoryReader() {
                 value={newTwist.twist_description}
                 onChange={(e) => setNewTwist({ ...newTwist, twist_description: e.target.value })}
                 placeholder="What's your plot twist idea?"
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent font-light"
                 required
               />
             </div>
@@ -428,15 +361,15 @@ export function StoryReader() {
               value={newTwist.content}
               onChange={(e) => setNewTwist({ ...newTwist, content: e.target.value })}
               placeholder="Write your plot twist content..."
-              rows={6}
-              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-4 resize-none"
+              rows={8}
+              className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-6 resize-none font-light"
               required
             />
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-4">
               <button
                 type="button"
                 onClick={() => setShowTwistForm(false)}
-                className="px-6 py-2 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
               >
                 Cancel
               </button>
@@ -451,61 +384,44 @@ export function StoryReader() {
         </div>
       )}
 
-      {/* Comments Section */}
       {showComments && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <MessageCircle className="h-5 w-5 mr-2 text-blue-500" />
-            Comments
-          </h3>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8">
+          <h3 className="text-2xl font-light text-gray-900 mb-6">Comments ({comments.length})</h3>
           
-          {/* Add Comment Form */}
-          <form onSubmit={handleAddComment} className="mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex-1">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3 resize-none text-sm"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:shadow-lg transition-all font-medium text-sm"
-                >
-                  Post
-                </button>
-              </div>
+          <form onSubmit={handleAddComment} className="mb-8">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              rows={4}
+              className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-4 resize-none font-light"
+            />
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
+              >
+                Post Comment
+              </button>
             </div>
           </form>
-          
-          {/* Comments List */}
-          <div className="space-y-4">
+
+          <div className="space-y-6">
             {comments.map((comment) => (
-              <div key={comment.id} className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-white" />
+              <div key={comment.id} className="border-l-2 border-gray-100 pl-6">
+                <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2 font-light">
+                  <span className="font-medium">{comment.author}</span>
+                  <span>•</span>
+                  <span>{new Date(comment.created_at).toLocaleDateString()}</span>
                 </div>
-                <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-gray-900 text-sm">{comment.author}</span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(comment.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 text-sm leading-relaxed">{comment.content}</p>
-                </div>
+                <p className="text-gray-700 font-light leading-relaxed">{comment.content}</p>
               </div>
             ))}
             
             {comments.length === 0 && (
-              <div className="text-center py-8">
-                <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">No comments yet. Be the first to share your thoughts!</p>
+              <div className="text-center py-12">
+                <div className="text-6xl font-light text-gray-300 mb-4">💬</div>
+                <p className="text-gray-500 font-light">No comments yet. Be the first to share your thoughts!</p>
               </div>
             )}
           </div>
