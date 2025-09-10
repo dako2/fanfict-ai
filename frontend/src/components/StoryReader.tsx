@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -53,13 +53,15 @@ export function StoryReader() {
   const [swapping, setSwapping] = useState(false)
   
   const [newComment, setNewComment] = useState('')
+  const [cachedNodes, setCachedNodes] = useState<Map<string, StoryNode>>(new Map())
+  const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false)
   const userId = 'user123' // In a real app, this would come from authentication
 
   useEffect(() => {
-    if (storyId) {
+    if (storyId && !isKeyboardNavigation) {
       fetchStoryData()
     }
-  }, [storyId, nodeId])
+  }, [storyId, nodeId, isKeyboardNavigation])
 
   const fetchStoryData = async () => {
     try {
@@ -184,6 +186,43 @@ export function StoryReader() {
     }
   }
 
+  const updateNodeCache = useCallback((nodes: StoryNode[]) => {
+    const nodeMap = new Map<string, StoryNode>()
+    nodes.forEach(node => {
+      nodeMap.set(node.id, node)
+    })
+    setCachedNodes(nodeMap)
+  }, [])
+
+  const handleKeyboardNodeSelect = useCallback((nodeId: string) => {
+    const cachedNode = cachedNodes.get(nodeId)
+    if (cachedNode) {
+      setIsKeyboardNavigation(true)
+      setCurrentNode(cachedNode)
+      setVotes({
+        likes: cachedNode.likes || Math.floor(Math.random() * 50) + 10,
+        dislikes: cachedNode.dislikes || Math.floor(Math.random() * 10) + 1
+      })
+      
+      fetchCommentsForNode(nodeId)
+      
+      window.history.replaceState(null, '', `/stories/${storyId}/nodes/${nodeId}`)
+      setIsKeyboardNavigation(false)
+    }
+  }, [cachedNodes, storyId])
+
+  const fetchCommentsForNode = async (nodeId: string) => {
+    try {
+      const commentsResponse = await fetch(`${API_BASE_URL}/api/nodes/${nodeId}/comments`)
+      if (commentsResponse.ok) {
+        const commentsData = await commentsResponse.json()
+        setComments(commentsData)
+      }
+    } catch (err) {
+      console.error('Failed to fetch comments:', err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center h-64 px-6">
@@ -226,6 +265,8 @@ export function StoryReader() {
             storyId={storyId!}
             currentNodeId={currentNode.id}
             onNodeSelect={(nodeId) => navigate(`/stories/${storyId}/nodes/${nodeId}`)}
+            onKeyboardNodeSelect={handleKeyboardNodeSelect}
+            onNodesLoaded={updateNodeCache}
             className="lg:sticky lg:top-8"
           />
         </div>

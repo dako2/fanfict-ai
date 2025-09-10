@@ -20,6 +20,8 @@ interface StoryTreeVisualizationProps {
   storyId: string
   currentNodeId: string
   onNodeSelect: (nodeId: string) => void
+  onKeyboardNodeSelect?: (nodeId: string) => void
+  onNodesLoaded?: (nodes: StoryNode[]) => void
   className?: string
 }
 
@@ -35,6 +37,8 @@ export default function StoryTreeVisualization({
   storyId, 
   currentNodeId, 
   onNodeSelect, 
+  onKeyboardNodeSelect,
+  onNodesLoaded,
   className = '' 
 }: StoryTreeVisualizationProps) {
   const [treeData, setTreeData] = useState<TreeNode | null>(null)
@@ -48,6 +52,10 @@ export default function StoryTreeVisualization({
       if (!response.ok) return
 
       const nodes = await response.json()
+      
+      if (onNodesLoaded) {
+        onNodesLoaded(nodes)
+      }
       
       const dag = buildDAG(nodes)
       setTreeData(dag)
@@ -126,7 +134,11 @@ export default function StoryTreeVisualization({
           const newIndex = Math.max(0, prev - 1)
           const newNodeId = flattenedNodes[newIndex].node.id
           setSelectedNodeId(newNodeId)
-          onNodeSelect(newNodeId)
+          if (onKeyboardNodeSelect) {
+            onKeyboardNodeSelect(newNodeId)
+          } else {
+            onNodeSelect(newNodeId)
+          }
           return newIndex
         })
         break
@@ -136,12 +148,16 @@ export default function StoryTreeVisualization({
           const newIndex = Math.min(flattenedNodes.length - 1, prev + 1)
           const newNodeId = flattenedNodes[newIndex].node.id
           setSelectedNodeId(newNodeId)
-          onNodeSelect(newNodeId)
+          if (onKeyboardNodeSelect) {
+            onKeyboardNodeSelect(newNodeId)
+          } else {
+            onNodeSelect(newNodeId)
+          }
           return newIndex
         })
         break
     }
-  }, [flattenedNodes, currentIndex, onNodeSelect])
+  }, [flattenedNodes, currentIndex, onNodeSelect, onKeyboardNodeSelect])
 
   useEffect(() => {
     fetchAllStoryNodes()
