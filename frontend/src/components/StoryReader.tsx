@@ -203,8 +203,8 @@ export function StoryReader() {
 
   if (error || !story || !currentNode) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 mb-4">{t('storyReader.error')}: {error || 'Story not found'}</p>
+      <div className="py-12">
+        <p className="text-red-600 mb-4 text-left">{t('storyReader.error')}: {error || 'Story not found'}</p>
         <button 
           onClick={() => navigate('/stories')}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -260,11 +260,11 @@ export function StoryReader() {
                 </div>
               </div>
 
-              <h1 className="text-3xl font-light text-gray-900 mb-4">{story.title}</h1>
-              <p className="text-gray-600 font-light mb-8 text-lg">{story.description}</p>
+              <h1 className="text-3xl font-light text-gray-900 mb-4 text-left">{story.title}</h1>
+              <p className="text-gray-600 font-light mb-8 text-lg text-left">{story.description}</p>
               
               <div className="prose max-w-none mb-8">
-                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed font-light text-lg">
+                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed font-light text-lg text-left">
                   {currentNode.content}
                 </div>
               </div>
@@ -428,9 +428,9 @@ export function StoryReader() {
                 ))}
                 
                 {comments.length === 0 && (
-                  <div className="text-center py-8">
+                  <div className="py-8">
                     <div className="text-4xl font-light text-gray-300 mb-3">💬</div>
-                    <p className="text-gray-500 font-light text-sm">{t('storyReader.noComments')}</p>
+                    <p className="text-gray-500 font-light text-sm text-left">{t('storyReader.noComments')}</p>
                   </div>
                 )}
               </div>

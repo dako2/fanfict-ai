@@ -98,9 +98,9 @@ export function StoryList() {
 
   if (error) {
     return (
-      <div className="text-center py-12 px-4">
+      <div className="py-12 px-4">
         <div className="bg-white rounded-lg p-8 shadow border border-gray-200 max-w-md mx-auto">
-          <p className="text-gray-600 mb-6">{t('storyList.error')}</p>
+          <p className="text-gray-600 mb-6 text-left">{t('storyList.error')}</p>
           <button 
             onClick={fetchStories}
             className="bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 transition-colors"
@@ -115,10 +115,10 @@ export function StoryList() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
       {stories.length === 0 ? (
-        <div className="text-center py-24">
+        <div className="py-24">
           <div className="bg-white rounded-2xl p-16 shadow-lg border border-gray-100 max-w-md mx-auto">
-            <h3 className="text-2xl font-light text-gray-900 mb-4">{t('storyList.noStories')}</h3>
-            <p className="text-gray-600 mb-8 font-light">{t('storyList.noStoriesDesc')}</p>
+            <h3 className="text-2xl font-light text-gray-900 mb-4 text-left">{t('storyList.noStories')}</h3>
+            <p className="text-gray-600 mb-8 font-light text-left">{t('storyList.noStoriesDesc')}</p>
             <Link 
               to="/stories/create"
               className="inline-flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"

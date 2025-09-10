@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { StoryList } from './components/StoryList'
 import { StoryReader } from './components/StoryReader'
 import { CreateStory } from './components/CreateStory'
+import { About } from './components/About'
 import { Navigation } from './components/Navigation'
 import './App.css'
 
@@ -18,6 +19,7 @@ function App() {
             <Route path="/stories/create" element={<CreateStory />} />
             <Route path="/stories/:storyId" element={<StoryReader />} />
             <Route path="/stories/:storyId/nodes/:nodeId" element={<StoryReader />} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </main>
       </div>

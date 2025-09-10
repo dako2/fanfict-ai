@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Plus, Home, Globe } from 'lucide-react'
+import { Plus, Home, Globe, Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export function Navigation() {
@@ -25,6 +25,14 @@ export function Navigation() {
             >
               <Home className="h-5 w-5" />
               <span className="font-medium">{t('nav.stories')}</span>
+            </Link>
+            
+            <Link 
+              to="/about" 
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <Info className="h-5 w-5" />
+              <span className="font-medium">{t('nav.about')}</span>
             </Link>
             
             <button
