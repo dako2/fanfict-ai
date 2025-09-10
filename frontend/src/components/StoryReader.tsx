@@ -194,7 +194,7 @@ export function StoryReader() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex items-center h-64 px-6">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <span className="ml-3 text-gray-600">{t('storyReader.loading')}</span>
       </div>
