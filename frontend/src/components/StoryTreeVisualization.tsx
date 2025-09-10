@@ -4,7 +4,7 @@ interface StoryNode {
   id: string
   story_id: string
   content: string
-  parent_id: string | null
+  parent_ids: string[]
   children_ids: string[]
   is_ai_generated: boolean
   created_at: string
@@ -44,50 +44,15 @@ export default function StoryTreeVisualization({
 
   const fetchAllStoryNodes = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}`)
+      const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes`)
       if (!response.ok) return
 
-      const story = await response.json()
-      const rootNodeId = story.root_node_id
-
-      const nodeMap = new Map<string, StoryNode>()
-      const nodesToFetch = [rootNodeId]
-      const visited = new Set<string>()
-
-      while (nodesToFetch.length > 0) {
-        const nodeId = nodesToFetch.shift()!
-        if (visited.has(nodeId)) continue
-        visited.add(nodeId)
-
-        try {
-          const nodeResponse = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes/${nodeId}`)
-          if (nodeResponse.ok) {
-            const node = await nodeResponse.json()
-            nodeMap.set(nodeId, node)
-
-            const childrenResponse = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes/${nodeId}/children`)
-            if (childrenResponse.ok) {
-              const children = await childrenResponse.json()
-              node.children_ids = children.map((child: StoryNode) => child.id)
-              children.forEach((child: StoryNode) => {
-                nodeMap.set(child.id, child)
-                if (!visited.has(child.id)) {
-                  nodesToFetch.push(child.id)
-                }
-              })
-            }
-          }
-        } catch (error) {
-          console.error(`Failed to fetch node ${nodeId}:`, error)
-        }
-      }
-
-      const nodes = Array.from(nodeMap.values())
+      const nodes = await response.json()
       
-      const tree = buildTree(nodes, rootNodeId)
-      setTreeData(tree)
+      const dag = buildDAG(nodes)
+      setTreeData(dag)
       
-      const flattened = flattenTree(tree)
+      const flattened = flattenDAG(dag)
       setFlattenedNodes(flattened)
       
       const currentIdx = flattened.findIndex(item => item.node.id === currentNodeId)
@@ -97,34 +62,57 @@ export default function StoryTreeVisualization({
     }
   }
 
-  const buildTree = (nodes: StoryNode[], rootId: string): TreeNode | null => {
+  const buildDAG = (nodes: StoryNode[]): TreeNode | null => {
     const nodeMap = new Map(nodes.map(node => [node.id, node]))
+    const visited = new Set<string>()
+    const visiting = new Set<string>()
+    
+    const rootNodes = nodes.filter(node => node.parent_ids.length === 0)
+    if (rootNodes.length === 0) return null
     
     const buildNode = (nodeId: string, level: number): TreeNode | null => {
+      if (visiting.has(nodeId)) {
+        console.warn(`Cycle detected at node ${nodeId}`)
+        return null
+      }
+      if (visited.has(nodeId)) {
+        const node = nodeMap.get(nodeId)
+        return node ? { node, level, children: [] } : null
+      }
+      
       const node = nodeMap.get(nodeId)
       if (!node) return null
+      
+      visiting.add(nodeId)
       
       const children = node.children_ids
         .map(childId => buildNode(childId, level + 1))
         .filter((child): child is TreeNode => child !== null)
       
+      visiting.delete(nodeId)
+      visited.add(nodeId)
+      
       return { node, level, children }
     }
     
-    return buildNode(rootId, 0)
+    return buildNode(rootNodes[0].id, 0)
   }
 
-  const flattenTree = (tree: TreeNode | null): { node: StoryNode; level: number }[] => {
-    if (!tree) return []
+  const flattenDAG = (dag: TreeNode | null): { node: StoryNode; level: number }[] => {
+    if (!dag) return []
     
     const result: { node: StoryNode; level: number }[] = []
+    const visited = new Set<string>()
     
     const traverse = (treeNode: TreeNode) => {
+      if (visited.has(treeNode.node.id)) return
+      visited.add(treeNode.node.id)
+      
       result.push({ node: treeNode.node, level: treeNode.level })
       treeNode.children.forEach(traverse)
     }
     
-    traverse(tree)
+    traverse(dag)
     return result
   }
 
@@ -138,6 +126,7 @@ export default function StoryTreeVisualization({
           const newIndex = Math.max(0, prev - 1)
           const newNodeId = flattenedNodes[newIndex].node.id
           setSelectedNodeId(newNodeId)
+          onNodeSelect(newNodeId)
           return newIndex
         })
         break
@@ -147,14 +136,9 @@ export default function StoryTreeVisualization({
           const newIndex = Math.min(flattenedNodes.length - 1, prev + 1)
           const newNodeId = flattenedNodes[newIndex].node.id
           setSelectedNodeId(newNodeId)
+          onNodeSelect(newNodeId)
           return newIndex
         })
-        break
-      case 'Enter':
-        event.preventDefault()
-        if (flattenedNodes[currentIndex]) {
-          onNodeSelect(flattenedNodes[currentIndex].node.id)
-        }
         break
     }
   }, [flattenedNodes, currentIndex, onNodeSelect])
@@ -212,7 +196,7 @@ export default function StoryTreeVisualization({
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-900">Story Map</h3>
         <div className="text-xs text-gray-500">
-          Use ↑↓ to navigate, Enter to jump
+          Use ↑↓ to navigate
         </div>
       </div>
       

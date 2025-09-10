@@ -17,7 +17,7 @@ interface StoryNode {
   id: string
   story_id: string
   content: string
-  parent_id: string | null
+  parent_ids: string[]
   children_ids: string[]
   is_ai_generated: boolean
   created_at: string
@@ -160,6 +160,7 @@ export function StoryReader() {
       navigate(`/stories/${randomStory.id}`)
     }
   }
+
 
   const handleContinueStory = async () => {
     if (!currentNode) return

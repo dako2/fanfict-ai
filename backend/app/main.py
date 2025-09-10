@@ -87,14 +87,14 @@ class Story(BaseModel):
 
 class StoryNodeCreate(BaseModel):
     content: str
-    parent_id: Optional[str] = None
+    parent_ids: List[str] = []
     is_ai_generated: bool = False
 
 class StoryNode(BaseModel):
     id: str
     story_id: str
     content: str
-    parent_id: Optional[str]
+    parent_ids: List[str]
     children_ids: List[str]
     is_ai_generated: bool
     created_at: datetime
@@ -320,7 +320,7 @@ If any field is missing, make reasonable assumptions based on the content provid
         "id": root_node_id,
         "story_id": story_id,
         "content": content,
-        "parent_id": None,
+        "parent_ids": [],
         "children_ids": [],
         "is_ai_generated": False,
         "created_at": datetime.now(),
@@ -373,19 +373,21 @@ async def get_story_node(story_id: str, node_id: str):
         raise HTTPException(status_code=404, detail="Story node not found in this story")
     return StoryNode(**node)
 
-@app.post("/api/stories/{story_id}/nodes/{parent_node_id}/children", response_model=StoryNode)
-async def create_story_node(story_id: str, parent_node_id: str, node_data: StoryNodeCreate):
+@app.post("/api/stories/{story_id}/nodes", response_model=StoryNode)
+async def create_story_node_dag(story_id: str, node_data: StoryNodeCreate):
     if story_id not in stories_db:
         raise HTTPException(status_code=404, detail="Story not found")
-    if parent_node_id not in story_nodes_db:
-        raise HTTPException(status_code=404, detail="Parent node not found")
+    
+    for parent_id in node_data.parent_ids:
+        if parent_id not in story_nodes_db:
+            raise HTTPException(status_code=404, detail=f"Parent node {parent_id} not found")
     
     node_id = str(uuid.uuid4())
     node = {
         "id": node_id,
         "story_id": story_id,
         "content": node_data.content,
-        "parent_id": parent_node_id,
+        "parent_ids": node_data.parent_ids,
         "children_ids": [],
         "is_ai_generated": node_data.is_ai_generated,
         "created_at": datetime.now(),
@@ -395,9 +397,25 @@ async def create_story_node(story_id: str, parent_node_id: str, node_data: Story
     }
     story_nodes_db[node_id] = node
     
-    story_nodes_db[parent_node_id]["children_ids"].append(node_id)
+    for parent_id in node_data.parent_ids:
+        story_nodes_db[parent_id]["children_ids"].append(node_id)
     
     return StoryNode(**node)
+
+@app.post("/api/stories/{story_id}/nodes/{parent_node_id}/children", response_model=StoryNode)
+async def create_story_node(story_id: str, parent_node_id: str, node_data: StoryNodeCreate):
+    if story_id not in stories_db:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if parent_node_id not in story_nodes_db:
+        raise HTTPException(status_code=404, detail="Parent node not found")
+    
+    node_data_dag = StoryNodeCreate(
+        content=node_data.content,
+        parent_ids=[parent_node_id],
+        is_ai_generated=node_data.is_ai_generated
+    )
+    
+    return await create_story_node_dag(story_id, node_data_dag)
 
 @app.get("/api/stories/{story_id}/nodes/{node_id}/children", response_model=List[StoryNode])
 async def get_node_children(story_id: str, node_id: str):
@@ -482,11 +500,11 @@ Please expand and enhance this plot twist while maintaining consistency with the
     
     new_node_data = StoryNodeCreate(
         content=ai_content,
-        parent_id=node_id,
+        parent_ids=[node_id],
         is_ai_generated=True
     )
     
-    return await create_story_node(story_id, node_id, new_node_data)
+    return await create_story_node_dag(story_id, new_node_data)
 
 @app.post("/api/nodes/{node_id}/vote", response_model=Vote)
 async def vote_on_node(node_id: str, vote_data: VoteCreate):
@@ -560,6 +578,31 @@ async def get_popular_nodes(story_id: str, limit: int = 10):
     popular_nodes = sorted(story_nodes, key=lambda x: x["likes"] - x["dislikes"], reverse=True)
     
     return [StoryNode(**node) for node in popular_nodes[:limit]]
+
+@app.get("/api/stories/{story_id}/nodes", response_model=List[StoryNode])
+async def get_all_story_nodes(story_id: str):
+    if story_id not in stories_db:
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    story_nodes = []
+    for node in story_nodes_db.values():
+        if node["story_id"] == story_id:
+            story_nodes.append(StoryNode(**node))
+    
+    return story_nodes
+
+@app.get("/api/stories/{story_id}/nodes/{node_id}/parents", response_model=List[StoryNode])
+async def get_node_parents(story_id: str, node_id: str):
+    if node_id not in story_nodes_db:
+        raise HTTPException(status_code=404, detail="Story node not found")
+    
+    node = story_nodes_db[node_id]
+    parents = []
+    for parent_id in node["parent_ids"]:
+        if parent_id in story_nodes_db:
+            parents.append(StoryNode(**story_nodes_db[parent_id]))
+    
+    return parents
 
 @app.get("/healthz")
 async def healthz():
