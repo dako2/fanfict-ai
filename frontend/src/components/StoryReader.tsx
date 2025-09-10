@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface Story {
@@ -42,19 +42,16 @@ export function StoryReader() {
   
   const [story, setStory] = useState<Story | null>(null)
   const [currentNode, setCurrentNode] = useState<StoryNode | null>(null)
-  const [children, setChildren] = useState<StoryNode[]>([])
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
   const [showComments] = useState(true)
-  const [showTwistForm, setShowTwistForm] = useState(false)
-  const [showContinueForm, setShowContinueForm] = useState(false)
   const [votes, setVotes] = useState({ likes: 0, dislikes: 0 })
+  const [allStories, setAllStories] = useState<Story[]>([])
+  const [swapping, setSwapping] = useState(false)
   
   const [newComment, setNewComment] = useState('')
-  const [newTwist, setNewTwist] = useState({ content: '', twist_description: '', author: 'Anonymous' })
-  const [newContinuation, setNewContinuation] = useState({ content: '', author: 'Anonymous' })
   const userId = 'user123' // In a real app, this would come from authentication
 
   useEffect(() => {
@@ -83,11 +80,6 @@ export function StoryReader() {
         dislikes: nodeData.dislikes || Math.floor(Math.random() * 10) + 1 
       })
       
-      const childrenResponse = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes/${targetNodeId}/children`)
-      if (childrenResponse.ok) {
-        const childrenData = await childrenResponse.json()
-        setChildren(childrenData)
-      }
       
       const commentsResponse = await fetch(`${API_BASE_URL}/api/nodes/${targetNodeId}/comments`)
       if (commentsResponse.ok) {
@@ -144,47 +136,45 @@ export function StoryReader() {
     }
   }
 
-  const handleCreateTwist = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentNode || !newTwist.content.trim()) return
-    
+  const fetchAllStories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes/${currentNode.id}/ai-twist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTwist)
-      })
-      
+      const response = await fetch(`${API_BASE_URL}/api/stories`)
       if (response.ok) {
-        const newNode = await response.json()
-        setNewTwist({ content: '', twist_description: '', author: 'Anonymous' })
-        setShowTwistForm(false)
-        navigate(`/stories/${storyId}/nodes/${newNode.id}`)
+        const stories = await response.json()
+        setAllStories(stories.filter((s: Story) => s.id !== storyId))
       }
     } catch (err) {
-      console.error('Failed to create twist:', err)
+      console.error('Failed to fetch stories:', err)
     }
   }
 
-  const handleContinueStory = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentNode || !newContinuation.content.trim()) return
+  const handleSwapStory = async () => {
+    if (allStories.length === 0) {
+      await fetchAllStories()
+    }
+    
+    if (allStories.length > 0) {
+      setSwapping(true)
+      const randomStory = allStories[Math.floor(Math.random() * allStories.length)]
+      navigate(`/stories/${randomStory.id}`)
+    }
+  }
+
+  const handleContinueStory = async () => {
+    if (!currentNode) return
     
     try {
       const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/nodes/${currentNode.id}/children`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          content: newContinuation.content, 
-          parent_id: currentNode.id,
-          is_ai_generated: false 
+          content: "The story continues with an unexpected turn...",
+          is_ai_generated: true
         })
       })
       
       if (response.ok) {
         const newNode = await response.json()
-        setNewContinuation({ content: '', author: 'Anonymous' })
-        setShowContinueForm(false)
         navigate(`/stories/${storyId}/nodes/${newNode.id}`)
       }
     } catch (err) {
@@ -271,124 +261,26 @@ export function StoryReader() {
             </div>
           </div>
 
-          {children.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-              <h3 className="text-2xl font-light text-gray-900 mb-6">{t('storyReader.continueReading')}</h3>
-              <div className="grid gap-4">
-                {children.map((child) => (
-                  <button
-                    key={child.id}
-                    onClick={() => navigate(`/stories/${storyId}/nodes/${child.id}`)}
-                    className="w-full text-left p-6 border border-gray-100 rounded-xl hover:shadow-md hover:border-gray-200 transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-gray-700">{child.author}</span>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-gray-400 hover:text-red-500 transition-colors">♡</span>
-                        <span className="text-sm text-gray-500 font-light">{child.likes} {t('storyReader.likes')}</span>
-                      </div>
-                    </div>
-                    <p className="text-gray-700 font-light leading-relaxed">{child.content.substring(0, 150)}...</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               <button
-                onClick={() => setShowContinueForm(!showContinueForm)}
-                className="flex items-center justify-center space-x-2 px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
+                onClick={handleSwapStory}
+                disabled={swapping}
+                className="flex items-center justify-center space-x-3 px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-all font-medium disabled:opacity-50"
               >
-                <Plus className="h-4 w-4" />
-                <span>{t('storyReader.continueReading')}</span>
+                <span className="text-2xl">👈</span>
+                <span>{t('storyReader.swapStory')}</span>
               </button>
               
               <button
-                onClick={() => setShowTwistForm(!showTwistForm)}
-                className="flex items-center justify-center space-x-2 px-6 py-3 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
+                onClick={handleContinueStory}
+                className="flex items-center justify-center space-x-3 px-8 py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
               >
-                <Plus className="h-4 w-4" />
-                <span>{t('storyReader.plotTwist')}</span>
+                <span className="text-2xl">👉</span>
+                <span>{t('storyReader.continueStory')}</span>
               </button>
             </div>
           </div>
-
-          {showContinueForm && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-              <h3 className="text-2xl font-light text-gray-900 mb-6">{t('storyReader.continueReading')}</h3>
-              <form onSubmit={handleContinueStory}>
-                <textarea
-                  value={newContinuation.content}
-                  onChange={(e) => setNewContinuation({ ...newContinuation, content: e.target.value })}
-                  placeholder={t('storyReader.plotTwistPlaceholder')}
-                  rows={8}
-                  className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-6 resize-none font-light"
-                  required
-                />
-                <div className="flex justify-end space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowContinueForm(false)}
-                    className="px-6 py-3 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    {t('createStory.cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
-                  >
-                    {t('createStory.publish')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {showTwistForm && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-              <h3 className="text-2xl font-light text-gray-900 mb-6">{t('storyReader.plotTwist')}</h3>
-              <form onSubmit={handleCreateTwist}>
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    {t('storyReader.plotTwist')}
-                  </label>
-                  <input
-                    type="text"
-                    value={newTwist.twist_description}
-                    onChange={(e) => setNewTwist({ ...newTwist, twist_description: e.target.value })}
-                    placeholder={t('storyReader.plotTwistPlaceholder')}
-                    className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent font-light"
-                    required
-                  />
-                </div>
-                <textarea
-                  value={newTwist.content}
-                  onChange={(e) => setNewTwist({ ...newTwist, content: e.target.value })}
-                  placeholder={t('storyReader.plotTwistPlaceholder')}
-                  rows={8}
-                  className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent mb-6 resize-none font-light"
-                  required
-                />
-                <div className="flex justify-end space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowTwistForm(false)}
-                    className="px-6 py-3 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    {t('createStory.cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:shadow-lg transition-all font-medium"
-                  >
-                    {t('storyReader.submitTwist')} ✨
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
         </div>
 
         {/* Comments - Right Side (Mobile: Full Width Below, Desktop: 1/3 Width) */}
