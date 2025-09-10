@@ -1,11 +1,14 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
+import hashlib
+import secrets
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -33,6 +36,41 @@ stories_db: Dict[str, Any] = {}
 story_nodes_db: Dict[str, Any] = {}
 comments_db: Dict[str, Any] = {}
 votes_db: Dict[str, Any] = {}
+users_db: Dict[str, Any] = {}
+sessions_db: Dict[str, Any] = {}
+
+security = HTTPBearer(auto_error=False)
+
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    bio: Optional[str] = ""
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class User(BaseModel):
+    id: str
+    username: str
+    email: str
+    bio: str
+    profile_picture: Optional[str] = None
+    created_at: datetime
+    stories_count: int = 0
+    comments_count: int = 0
+
+class UserProfile(BaseModel):
+    id: str
+    username: str
+    bio: str
+    profile_picture: Optional[str] = None
+    created_at: datetime
+    stories_count: int = 0
+    comments_count: int = 0
+    recent_stories: List[Dict[str, Any]] = []
+    recent_comments: List[Dict[str, Any]] = []
 
 class StoryCreate(BaseModel):
     story_input: str
@@ -44,6 +82,8 @@ class Story(BaseModel):
     genre: str
     created_at: datetime
     root_node_id: str
+    author_id: Optional[str] = None
+    author_name: str = "Anonymous"
 
 class StoryNodeCreate(BaseModel):
     content: str
@@ -89,8 +129,132 @@ class Vote(BaseModel):
     vote_type: str
     created_at: datetime
 
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    return hash_password(password) == hashed
+
+def create_session_token() -> str:
+    return secrets.token_urlsafe(32)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[Dict[str, Any]]:
+    if not credentials:
+        return None
+    
+    token = credentials.credentials
+    for session in sessions_db.values():
+        if session["token"] == token and session["expires_at"] > datetime.now():
+            user_id = session["user_id"]
+            if user_id in users_db:
+                return users_db[user_id]
+    return None
+
+@app.post("/api/auth/register", response_model=User)
+async def register_user(user_data: UserCreate):
+    if any(user["username"] == user_data.username for user in users_db.values()):
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    if any(user["email"] == user_data.email for user in users_db.values()):
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
+    user_id = str(uuid.uuid4())
+    hashed_password = hash_password(user_data.password)
+    
+    user = {
+        "id": user_id,
+        "username": user_data.username,
+        "email": user_data.email,
+        "bio": user_data.bio,
+        "profile_picture": None,
+        "password_hash": hashed_password,
+        "created_at": datetime.now(),
+        "stories_count": 0,
+        "comments_count": 0
+    }
+    users_db[user_id] = user
+    
+    return User(**{k: v for k, v in user.items() if k != "password_hash"})
+
+@app.post("/api/auth/login")
+async def login_user(login_data: UserLogin):
+    user = None
+    for u in users_db.values():
+        if u["username"] == login_data.username:
+            user = u
+            break
+    
+    if not user or not verify_password(login_data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    token = create_session_token()
+    session_id = str(uuid.uuid4())
+    
+    session = {
+        "id": session_id,
+        "user_id": user["id"],
+        "token": token,
+        "created_at": datetime.now(),
+        "expires_at": datetime.now() + timedelta(days=30)
+    }
+    sessions_db[session_id] = session
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": User(**{k: v for k, v in user.items() if k != "password_hash"})
+    }
+
+@app.post("/api/auth/logout")
+async def logout_user(current_user: Dict[str, Any] = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    sessions_to_remove = []
+    for session_id, session in sessions_db.items():
+        if session["user_id"] == current_user["id"]:
+            sessions_to_remove.append(session_id)
+    
+    for session_id in sessions_to_remove:
+        del sessions_db[session_id]
+    
+    return {"message": "Logged out successfully"}
+
+@app.get("/api/auth/me", response_model=User)
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    return User(**{k: v for k, v in current_user.items() if k != "password_hash"})
+
+@app.get("/api/users/{user_id}/profile", response_model=UserProfile)
+async def get_user_profile(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user = users_db[user_id]
+    
+    user_stories = []
+    for story in stories_db.values():
+        if story.get("author_id") == user_id:
+            user_stories.append(story)
+    
+    user_comments = []
+    for comment in comments_db.values():
+        if comment.get("author_id") == user_id:
+            user_comments.append(comment)
+    
+    recent_stories = sorted(user_stories, key=lambda x: x["created_at"], reverse=True)[:5]
+    recent_comments = sorted(user_comments, key=lambda x: x["created_at"], reverse=True)[:10]
+    
+    return UserProfile(
+        **{k: v for k, v in user.items() if k != "password_hash"},
+        recent_stories=recent_stories,
+        recent_comments=recent_comments
+    )
+
 @app.post("/api/stories", response_model=Story)
-async def create_story(story_data: StoryCreate):
+async def create_story(story_data: StoryCreate, current_user: Dict[str, Any] = Depends(get_current_user)):
     story_id = str(uuid.uuid4())
     root_node_id = str(uuid.uuid4())
     
@@ -166,15 +330,27 @@ If any field is missing, make reasonable assumptions based on the content provid
     }
     story_nodes_db[root_node_id] = root_node
     
+    author_name = "Anonymous"
+    author_id = None
+    if current_user:
+        author_name = current_user["username"]
+        author_id = current_user["id"]
+        users_db[current_user["id"]]["stories_count"] += 1
+    
     story = {
         "id": story_id,
         "title": title,
         "description": description,
         "genre": genre,
         "created_at": datetime.now(),
-        "root_node_id": root_node_id
+        "root_node_id": root_node_id,
+        "author_id": author_id,
+        "author_name": author_name
     }
     stories_db[story_id] = story
+    
+    root_node["author"] = author_name
+    root_node["author_id"] = author_id
     
     return Story(**story)
 
@@ -237,16 +413,24 @@ async def get_node_children(story_id: str, node_id: str):
     return children
 
 @app.post("/api/nodes/{node_id}/comments", response_model=Comment)
-async def create_comment(node_id: str, comment_data: CommentCreate):
+async def create_comment(node_id: str, comment_data: CommentCreate, current_user: Dict[str, Any] = Depends(get_current_user)):
     if node_id not in story_nodes_db:
         raise HTTPException(status_code=404, detail="Story node not found")
+    
+    author_name = comment_data.author or "Anonymous"
+    author_id = None
+    if current_user:
+        author_name = current_user["username"]
+        author_id = current_user["id"]
+        users_db[current_user["id"]]["comments_count"] += 1
     
     comment_id = str(uuid.uuid4())
     comment = {
         "id": comment_id,
         "node_id": node_id,
         "content": comment_data.content,
-        "author": comment_data.author,
+        "author": author_name,
+        "author_id": author_id,
         "created_at": datetime.now()
     }
     comments_db[comment_id] = comment

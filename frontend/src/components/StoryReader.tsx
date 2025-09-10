@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import StoryTreeVisualization from './StoryTreeVisualization'
 
 interface Story {
   id: string
@@ -217,9 +218,19 @@ export function StoryReader() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Story Content - Left Side (Mobile: Full Width, Desktop: 2/3 Width) */}
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Story Tree Visualization - Left Sidebar */}
+        <div className="lg:col-span-1 order-2 lg:order-1">
+          <StoryTreeVisualization
+            storyId={storyId!}
+            currentNodeId={currentNode.id}
+            onNodeSelect={(nodeId) => navigate(`/stories/${storyId}/nodes/${nodeId}`)}
+            className="lg:sticky lg:top-8"
+          />
+        </div>
+
+        {/* Story Content - Center (Mobile: Full Width, Desktop: 2/4 Width) */}
+        <div className="lg:col-span-2 space-y-8 order-1 lg:order-2">
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -283,8 +294,8 @@ export function StoryReader() {
           </div>
         </div>
 
-        {/* Comments - Right Side (Mobile: Full Width Below, Desktop: 1/3 Width) */}
-        <div className="lg:col-span-1">
+        {/* Comments - Right Side (Mobile: Full Width Below, Desktop: 1/4 Width) */}
+        <div className="lg:col-span-1 order-3">
           {showComments && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 lg:sticky lg:top-8">
               <h3 className="text-xl font-light text-gray-900 mb-6">{t('storyReader.comments')} ({comments.length})</h3>
