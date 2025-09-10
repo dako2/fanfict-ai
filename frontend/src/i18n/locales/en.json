@@ -82,6 +82,41 @@
     "startWriting": "Start Writing",
     "exploreStories": "Explore Stories"
   },
+  "profile": {
+    "loading": "Loading profile...",
+    "notFound": "Profile Not Found",
+    "userNotFound": "This user doesn't exist or has been removed.",
+    "loadError": "Failed to load profile. Please try again.",
+    "editProfile": "Edit Profile",
+    "joinedOn": "Joined on",
+    "stories": "Stories",
+    "comments": "Comments",
+    "nodes": "nodes",
+    "commentOn": "Comment on",
+    "noStories": "No stories yet",
+    "noStoriesOwn": "You haven't written any stories yet. Start creating!",
+    "noComments": "No comments yet",
+    "noCommentsOwn": "You haven't left any comments yet. Start engaging with stories!"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "bio": "Bio",
+    "optional": "optional",
+    "bioPlaceholder": "Tell us a bit about yourself...",
+    "loginError": "Invalid username or password",
+    "registerError": "Registration failed. Please try again.",
+    "passwordMismatch": "Passwords do not match",
+    "loggingIn": "Logging in...",
+    "registering": "Registering...",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
   "common": {
     "genre": "Genre",
     "author": "Author",
@@ -91,6 +126,7 @@
     "edit": "Edit",
     "delete": "Delete",
     "confirm": "Confirm",
-    "close": "Close"
+    "close": "Close",
+    "back": "Back"
   }
 }

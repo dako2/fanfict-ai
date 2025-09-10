@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useSwipeable } from 'react-swipeable'
+import { useAuth } from '../contexts/AuthContext'
 import StoryTreeVisualization from './StoryTreeVisualization'
 
 interface Story {
@@ -55,13 +57,36 @@ export function StoryReader() {
   const [newComment, setNewComment] = useState('')
   const [cachedNodes, setCachedNodes] = useState<Map<string, StoryNode>>(new Map())
   const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false)
-  const userId = 'user123' // In a real app, this would come from authentication
+  const { user } = useAuth()
+  const userId = user?.id || 'anonymous'
 
   useEffect(() => {
     if (storyId && !isKeyboardNavigation) {
       fetchStoryData()
     }
   }, [storyId, nodeId, isKeyboardNavigation])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault()
+          handleSwapStory()
+          break
+        case 'ArrowRight':
+          event.preventDefault()
+          handleContinueStory()
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const fetchStoryData = async () => {
     try {
@@ -127,7 +152,7 @@ export function StoryReader() {
       const response = await fetch(`${API_BASE_URL}/api/nodes/${currentNode.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newComment, author: 'Anonymous' })
+        body: JSON.stringify({ content: newComment, author: user?.username || 'Anonymous' })
       })
       
       if (response.ok) {
@@ -223,6 +248,30 @@ export function StoryReader() {
     }
   }
 
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => handleContinueStory(),
+    onSwipedRight: () => handleSwapStory(),
+    onSwipedUp: () => {
+      const currentIdx = cachedNodes.size > 0 ? 
+        Array.from(cachedNodes.keys()).indexOf(currentNode?.id || '') : -1
+      if (currentIdx > 0) {
+        const prevNodeId = Array.from(cachedNodes.keys())[currentIdx - 1]
+        handleKeyboardNodeSelect(prevNodeId)
+      }
+    },
+    onSwipedDown: () => {
+      const currentIdx = cachedNodes.size > 0 ? 
+        Array.from(cachedNodes.keys()).indexOf(currentNode?.id || '') : -1
+      const nodeIds = Array.from(cachedNodes.keys())
+      if (currentIdx >= 0 && currentIdx < nodeIds.length - 1) {
+        const nextNodeId = nodeIds[currentIdx + 1]
+        handleKeyboardNodeSelect(nextNodeId)
+      }
+    },
+    preventScrollOnSwipe: true,
+    trackMouse: true
+  })
+
   if (loading) {
     return (
       <div className="flex items-center h-64 px-6">
@@ -247,7 +296,7 @@ export function StoryReader() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
+    <div {...swipeHandlers} className="max-w-7xl mx-auto px-6 py-12">
       <div className="mb-8">
         <button
           onClick={() => navigate('/stories')}

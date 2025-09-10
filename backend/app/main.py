@@ -168,13 +168,18 @@ async def register_user(user_data: UserCreate):
         "bio": user_data.bio,
         "profile_picture": None,
         "password_hash": hashed_password,
-        "created_at": datetime.now(),
-        "stories_count": 0,
-        "comments_count": 0
+        "created_at": datetime.now()
     }
     users_db[user_id] = user
     
-    return User(**{k: v for k, v in user.items() if k != "password_hash"})
+    stories_count = sum(1 for story in stories_db.values() if story.get("author_id") == user_id)
+    comments_count = sum(1 for comment in comments_db.values() if comment.get("author_id") == user_id)
+    
+    return User(
+        **{k: v for k, v in user.items() if k != "password_hash"},
+        stories_count=stories_count,
+        comments_count=comments_count
+    )
 
 @app.post("/api/auth/login")
 async def login_user(login_data: UserLogin):
@@ -226,6 +231,22 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     return User(**{k: v for k, v in current_user.items() if k != "password_hash"})
+
+@app.get("/api/users/{user_id}", response_model=User)
+async def get_user(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user = users_db[user_id]
+    
+    stories_count = sum(1 for story in stories_db.values() if story.get("author_id") == user_id)
+    comments_count = sum(1 for comment in comments_db.values() if comment.get("author_id") == user_id)
+    
+    return User(
+        **{k: v for k, v in user.items() if k != "password_hash"},
+        stories_count=stories_count,
+        comments_count=comments_count
+    )
 
 @app.get("/api/users/{user_id}/profile", response_model=UserProfile)
 async def get_user_profile(user_id: str):
@@ -603,6 +624,76 @@ async def get_node_parents(story_id: str, node_id: str):
             parents.append(StoryNode(**story_nodes_db[parent_id]))
     
     return parents
+
+@app.get("/api/users/{user_id}/stories", response_model=List[Dict[str, Any]])
+async def get_user_stories(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_stories = []
+    for story in stories_db.values():
+        if story.get("author_id") == user_id:
+            node_count = sum(1 for node in story_nodes_db.values() if node["story_id"] == story["id"])
+            story_with_nodes = {**story, "nodes_count": node_count}
+            user_stories.append(story_with_nodes)
+    
+    return sorted(user_stories, key=lambda x: x["created_at"], reverse=True)
+
+@app.get("/api/users/{user_id}/comments", response_model=List[Dict[str, Any]])
+async def get_user_comments(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_comments = []
+    for comment in comments_db.values():
+        if comment.get("author_id") == user_id:
+            node = story_nodes_db.get(comment["node_id"])
+            if node:
+                story = stories_db.get(node["story_id"])
+                if story:
+                    comment_with_story = {
+                        **comment,
+                        "story_title": story["title"],
+                        "story_id": story["id"]
+                    }
+                    user_comments.append(comment_with_story)
+    
+    return sorted(user_comments, key=lambda x: x["created_at"], reverse=True)
+
+@app.get("/api/users/{user_id}/stories", response_model=List[Dict[str, Any]])
+async def get_user_stories(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_stories = []
+    for story in stories_db.values():
+        if story.get("author_id") == user_id:
+            node_count = sum(1 for node in story_nodes_db.values() if node["story_id"] == story["id"])
+            story_with_nodes = {**story, "nodes_count": node_count}
+            user_stories.append(story_with_nodes)
+    
+    return sorted(user_stories, key=lambda x: x["created_at"], reverse=True)
+
+@app.get("/api/users/{user_id}/comments", response_model=List[Dict[str, Any]])
+async def get_user_comments(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user_comments = []
+    for comment in comments_db.values():
+        if comment.get("author_id") == user_id:
+            node = story_nodes_db.get(comment["node_id"])
+            if node:
+                story = stories_db.get(node["story_id"])
+                if story:
+                    comment_with_story = {
+                        **comment,
+                        "story_title": story["title"],
+                        "story_id": story["id"]
+                    }
+                    user_comments.append(comment_with_story)
+    
+    return sorted(user_comments, key=lambda x: x["created_at"], reverse=True)
 
 @app.get("/healthz")
 async def healthz():

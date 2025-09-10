@@ -82,6 +82,41 @@
     "startWriting": "开始写作",
     "exploreStories": "探索故事"
   },
+  "profile": {
+    "loading": "加载个人资料中...",
+    "notFound": "未找到个人资料",
+    "userNotFound": "此用户不存在或已被删除。",
+    "loadError": "加载个人资料失败，请重试。",
+    "editProfile": "编辑个人资料",
+    "joinedOn": "加入于",
+    "stories": "故事",
+    "comments": "评论",
+    "nodes": "节点",
+    "commentOn": "评论于",
+    "noStories": "暂无故事",
+    "noStoriesOwn": "您还没有创作任何故事。开始创作吧！",
+    "noComments": "暂无评论",
+    "noCommentsOwn": "您还没有发表任何评论。开始参与故事讨论吧！"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出",
+    "username": "用户名",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "bio": "个人简介",
+    "optional": "可选",
+    "bioPlaceholder": "介绍一下自己...",
+    "loginError": "用户名或密码错误",
+    "registerError": "注册失败，请重试。",
+    "passwordMismatch": "密码不匹配",
+    "loggingIn": "登录中...",
+    "registering": "注册中...",
+    "noAccount": "还没有账户？",
+    "hasAccount": "已有账户？"
+  },
   "common": {
     "genre": "类型",
     "author": "作者",
@@ -91,6 +126,7 @@
     "edit": "编辑",
     "delete": "删除",
     "confirm": "确认",
-    "close": "关闭"
+    "close": "关闭",
+    "back": "返回"
   }
 }
