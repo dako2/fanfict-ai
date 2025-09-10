@@ -57,6 +57,7 @@ export function StoryReader() {
   const [newComment, setNewComment] = useState('')
   const [cachedNodes, setCachedNodes] = useState<Map<string, StoryNode>>(new Map())
   const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false)
+  const [showStoryMap, setShowStoryMap] = useState(false)
   const { user } = useAuth()
   const userId = user?.id || 'anonymous'
 
@@ -297,7 +298,7 @@ export function StoryReader() {
 
   return (
     <div {...swipeHandlers} className="max-w-7xl mx-auto px-6 py-12">
-      <div className="mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <button
           onClick={() => navigate('/stories')}
           className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors font-medium"
@@ -305,23 +306,33 @@ export function StoryReader() {
           <ArrowLeft className="h-4 w-4" />
           <span>{t('storyReader.backToStories')}</span>
         </button>
+        
+        <button
+          onClick={() => setShowStoryMap(!showStoryMap)}
+          className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors font-medium border border-gray-200 rounded-lg hover:bg-gray-50"
+        >
+          <span className="text-sm">🗺️</span>
+          <span className="text-sm">{showStoryMap ? t('storyReader.hideMap') : t('storyReader.showMap')}</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Story Tree Visualization - Left Sidebar */}
-        <div className="lg:col-span-1 order-2 lg:order-1">
-          <StoryTreeVisualization
-            storyId={storyId!}
-            currentNodeId={currentNode.id}
-            onNodeSelect={(nodeId) => navigate(`/stories/${storyId}/nodes/${nodeId}`)}
-            onKeyboardNodeSelect={handleKeyboardNodeSelect}
-            onNodesLoaded={updateNodeCache}
-            className="lg:sticky lg:top-8"
-          />
-        </div>
+      <div className={`grid grid-cols-1 gap-6 ${showStoryMap ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        {/* Story Tree Visualization - Left Sidebar (Conditional) */}
+        {showStoryMap && (
+          <div className="lg:col-span-1 order-2 lg:order-1">
+            <StoryTreeVisualization
+              storyId={storyId!}
+              currentNodeId={currentNode.id}
+              onNodeSelect={(nodeId) => navigate(`/stories/${storyId}/nodes/${nodeId}`)}
+              onKeyboardNodeSelect={handleKeyboardNodeSelect}
+              onNodesLoaded={updateNodeCache}
+              className="lg:sticky lg:top-8"
+            />
+          </div>
+        )}
 
-        {/* Story Content - Center (Mobile: Full Width, Desktop: 2/4 Width) */}
-        <div className="lg:col-span-2 space-y-8 order-1 lg:order-2">
+        {/* Story Content - Center (Mobile: Full Width, Desktop: Responsive Width) */}
+        <div className={`space-y-8 order-1 ${showStoryMap ? 'lg:col-span-2 lg:order-2' : 'lg:col-span-2 lg:order-1'}`}>
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -355,32 +366,31 @@ export function StoryReader() {
               <h1 className="text-3xl font-light text-gray-900 mb-4 text-left">{story.title}</h1>
               <p className="text-gray-600 font-light mb-8 text-lg text-left">{story.description}</p>
               
-              <div className="prose max-w-none mb-8">
+              <div className="prose max-w-none mb-6">
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed font-light text-lg text-left">
                   {currentNode.content}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-            <div className="grid grid-cols-2 gap-6">
-              <button
-                onClick={handleSwapStory}
-                disabled={swapping}
-                className="flex items-center justify-center space-x-3 px-8 py-4 border-2 border-gray-200 text-gray-700 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-all font-medium disabled:opacity-50"
-              >
-                <span className="text-2xl">👈</span>
-                <span>{t('storyReader.swapStory')}</span>
-              </button>
-              
-              <button
-                onClick={handleContinueStory}
-                className="flex items-center justify-center space-x-3 px-8 py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
-              >
-                <span className="text-2xl">👉</span>
-                <span>{t('storyReader.continueStory')}</span>
-              </button>
+              {/* Inline Story Navigation Buttons */}
+              <div className="flex justify-center space-x-3 pt-4 border-t border-gray-100">
+                <button
+                  onClick={handleSwapStory}
+                  disabled={swapping}
+                  className="flex items-center space-x-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium disabled:opacity-50"
+                >
+                  <span className="text-sm">👈</span>
+                  <span>{t('storyReader.swapStory')}</span>
+                </button>
+                
+                <button
+                  onClick={handleContinueStory}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                >
+                  <span className="text-sm">👉</span>
+                  <span>{t('storyReader.continueStory')}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
