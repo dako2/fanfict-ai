@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "title": "FanFiction",
+    "stories": "Stories",
+    "create": "Create",
+    "home": "Home"
+  },
+  "storyList": {
+    "noStories": "No stories yet",
+    "noStoriesDesc": "Be the first to share your creative story",
+    "createStory": "Create Story",
+    "read": "Read",
+    "loading": "Loading stories...",
+    "error": "Oops! Something went wrong",
+    "tryAgain": "Try Again"
+  },
+  "createStory": {
+    "title": "Create Your Story",
+    "subtitle": "Share your creative vision with the world",
+    "backToStories": "Back to Stories",
+    "inputLabel": "Tell your story (include title, description, genre, and content)",
+    "placeholder": "Example:\n\nTitle: The Magical Academy Chronicles\nGenre: Fantasy\nDescription: A young wizard discovers they have unique powers that could change the magical world forever.\n\nStory:\nThe ancient stone walls of Mystwood Academy towered above Emma as she stepped through the grand entrance for the first time...",
+    "cancel": "Cancel",
+    "publish": "Publish Story",
+    "publishing": "Publishing...",
+    "error": "Failed to create story. Please try again."
+  },
+  "storyReader": {
+    "backToStories": "Back to Stories",
+    "loading": "Loading story...",
+    "error": "Error: Failed to fetch story.",
+    "tryAgain": "Try Again",
+    "comments": "Comments",
+    "noComments": "No comments yet. Be the first to share your thoughts!",
+    "addComment": "Add a comment...",
+    "postComment": "Post Comment",
+    "posting": "Posting...",
+    "plotTwist": "Propose Plot Twist",
+    "plotTwistPlaceholder": "Describe your plot twist idea...",
+    "submitTwist": "Submit Twist",
+    "submitting": "Submitting...",
+    "vote": "Vote",
+    "likes": "likes",
+    "readNext": "Read Next",
+    "chooseNext": "Choose what happens next:",
+    "continueReading": "Continue Reading"
+  },
+  "common": {
+    "genre": "Genre",
+    "author": "Author",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close"
+  }
+}

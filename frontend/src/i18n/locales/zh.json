@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "title": "同人小说",
+    "stories": "故事",
+    "create": "创作",
+    "home": "首页"
+  },
+  "storyList": {
+    "noStories": "暂无故事",
+    "noStoriesDesc": "成为第一个分享创意故事的人",
+    "createStory": "创作故事",
+    "read": "阅读",
+    "loading": "加载故事中...",
+    "error": "哎呀！出了点问题",
+    "tryAgain": "重试"
+  },
+  "createStory": {
+    "title": "创作您的故事",
+    "subtitle": "与世界分享您的创意愿景",
+    "backToStories": "返回故事列表",
+    "inputLabel": "讲述您的故事（包括标题、描述、类型和内容）",
+    "placeholder": "示例：\n\n标题：魔法学院编年史\n类型：奇幻\n描述：一个年轻的巫师发现自己拥有可能改变魔法世界的独特力量。\n\n故事：\n神秘森林学院古老的石墙在艾玛面前高高耸立，这是她第一次踏进这座宏伟的入口...",
+    "cancel": "取消",
+    "publish": "发布故事",
+    "publishing": "发布中...",
+    "error": "创建故事失败，请重试。"
+  },
+  "storyReader": {
+    "backToStories": "返回故事列表",
+    "loading": "加载故事中...",
+    "error": "错误：获取故事失败。",
+    "tryAgain": "重试",
+    "comments": "评论",
+    "noComments": "暂无评论。成为第一个分享想法的人！",
+    "addComment": "添加评论...",
+    "postComment": "发表评论",
+    "posting": "发表中...",
+    "plotTwist": "提议剧情转折",
+    "plotTwistPlaceholder": "描述您的剧情转折想法...",
+    "submitTwist": "提交转折",
+    "submitting": "提交中...",
+    "vote": "投票",
+    "likes": "赞",
+    "readNext": "继续阅读",
+    "chooseNext": "选择接下来发生什么：",
+    "continueReading": "继续阅读"
+  },
+  "common": {
+    "genre": "类型",
+    "author": "作者",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "save": "保存",
+    "edit": "编辑",
+    "delete": "删除",
+    "confirm": "确认",
+    "close": "关闭"
+  }
+}

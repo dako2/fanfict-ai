@@ -1,3 +1,4 @@
+import './i18n'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { StoryList } from './components/StoryList'
 import { StoryReader } from './components/StoryReader'

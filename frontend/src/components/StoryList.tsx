@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Story {
   id: string
@@ -14,6 +15,7 @@ interface Story {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export function StoryList() {
+  const { t } = useTranslation()
   const [stories, setStories] = useState<Story[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +91,7 @@ export function StoryList() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent"></div>
+        <span className="ml-3 text-gray-600">{t('storyList.loading')}</span>
       </div>
     )
   }
@@ -97,12 +100,12 @@ export function StoryList() {
     return (
       <div className="text-center py-12 px-4">
         <div className="bg-white rounded-lg p-8 shadow border border-gray-200 max-w-md mx-auto">
-          <p className="text-gray-600 mb-6">Oops! Something went wrong</p>
+          <p className="text-gray-600 mb-6">{t('storyList.error')}</p>
           <button 
             onClick={fetchStories}
             className="bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 transition-colors"
           >
-            Try Again
+            {t('storyList.tryAgain')}
           </button>
         </div>
       </div>
@@ -114,14 +117,14 @@ export function StoryList() {
       {stories.length === 0 ? (
         <div className="text-center py-24">
           <div className="bg-white rounded-2xl p-16 shadow-lg border border-gray-100 max-w-md mx-auto">
-            <h3 className="text-2xl font-light text-gray-900 mb-4">No stories yet</h3>
-            <p className="text-gray-600 mb-8 font-light">Be the first to share your creative story</p>
+            <h3 className="text-2xl font-light text-gray-900 mb-4">{t('storyList.noStories')}</h3>
+            <p className="text-gray-600 mb-8 font-light">{t('storyList.noStoriesDesc')}</p>
             <Link 
               to="/stories/create"
               className="inline-flex items-center space-x-2 px-6 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors font-medium"
             >
               <Plus className="h-4 w-4" />
-              <span>Create Story</span>
+              <span>{t('storyList.createStory')}</span>
             </Link>
           </div>
         </div>
@@ -178,7 +181,7 @@ export function StoryList() {
                     to={`/stories/${story.id}`}
                     className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
                   >
-                    Read →
+                    {t('storyList.read')} →
                   </Link>
                 </div>
               </div>
